@@ -1,0 +1,347 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>myknn</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-01-11"><meta name="DC.source" content="myknn.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">% Lazy learner: not a typical training phase by definition - therefore very fast in this</span>
+<span class="comment">% phase</span>
+<span class="comment">% Classification slower the more examples - needs to check nearest neighbours</span>
+<span class="comment">% in entire dataset</span>
+<span class="comment">% No parameters and one hyperparameter - k</span>
+<span class="keyword">classdef</span> myknn
+    <span class="keyword">methods</span>(Static)
+
+        <span class="comment">% The training process - builds the model, m.</span>
+        <span class="comment">% fit() takes a copy of all the training examples, training</span>
+        <span class="comment">% labels and k to create the structure m.</span>
+        <span class="keyword">function</span> m = fit(train_examples, train_labels, k)
+
+            <span class="comment">% Start of z-score standardisation process</span>
+            <span class="comment">% Stops a certain feature from drowning out other features</span>
+            <span class="comment">% Makes sure all are scaled the same - can be compared</span>
+            <span class="comment">% e.g. all features measured from 1-10</span>
+            <span class="comment">% mean of the training data/standard deviation of the training</span>
+            <span class="comment">% data</span>
+			m.mean = mean(train_examples{:,:});
+			m.std = std(train_examples{:,:});
+            <span class="keyword">for</span> i=1:size(train_examples,1)
+				train_examples{i,:} = train_examples{i,:} - m.mean;
+                train_examples{i,:} = train_examples{i,:} ./ m.std;
+            <span class="keyword">end</span>
+            <span class="comment">% End of standardisation process</span>
+
+            <span class="comment">% Store the training examples into m structure</span>
+            m.train_examples = train_examples;
+
+            <span class="comment">% Store the training labels into m structure</span>
+            m.train_labels = train_labels;
+
+            <span class="comment">% Store the number of nearest neighbours to be used into m</span>
+            <span class="comment">% structure</span>
+            m.k = k;
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% This function makes use of the predict_one() function to make an</span>
+        <span class="comment">% array of predictions the classifier has made</span>
+        <span class="keyword">function</span> predictions = predict(m, test_examples)
+
+            predictions = categorical;
+
+            <span class="comment">% Loop through ALL of the test examples</span>
+            <span class="keyword">for</span> i=1:size(test_examples,1)
+
+                fprintf(<span class="string">'classifying example example %i/%i\n'</span>, i, size(test_examples,1));
+
+                <span class="comment">% Store the current test example</span>
+                this_test_example = test_examples{i,:};
+
+                <span class="comment">% Start of standardisation process</span>
+                this_test_example = this_test_example - m.mean;
+                this_test_example = this_test_example ./ m.std;
+                <span class="comment">% End of standardisation process</span>
+
+                <span class="comment">% Call predict_one() on the current example</span>
+                this_prediction = myknn.predict_one(m, this_test_example);
+
+                <span class="comment">% Add the result to the predictions array</span>
+                predictions(end+1) = this_prediction;
+
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> prediction = predict_one(m, this_test_example)
+            <span class="comment">% Calculate the distance between the current example and all of</span>
+            <span class="comment">% the other testing examples</span>
+            distances = myknn.calculate_distances(m, this_test_example);
+            neighbour_indices = myknn.find_nn_indices(m, distances);
+            prediction = myknn.make_prediction(m, neighbour_indices);
+
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> distances = calculate_distances(m, this_test_example)
+
+			distances = [];
+
+            <span class="comment">% Loop through all of the TRAINING examples, NOT testing</span>
+            <span class="comment">% examples</span>
+			<span class="keyword">for</span> i=1:size(m.train_examples,1)
+                <span class="comment">% Store current training example</span>
+				this_training_example = m.train_examples{i,:};
+
+                <span class="comment">% Calculate the distance between the current training</span>
+                <span class="comment">% example and the current test example</span>
+                this_distance = myknn.calculate_distance(this_training_example, this_test_example);
+
+                <span class="comment">% Add the distance calculated to distances array</span>
+                distances(end+1) = this_distance;
+            <span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Euclidean distance the straight line distance between 2 points</span>
+        <span class="comment">% Used as a measure of similarity</span>
+        <span class="comment">% Uses Pythagoras' Thereom</span>
+        <span class="keyword">function</span> distance = calculate_distance(p, q)
+			differences = q - p;
+            squares = differences .^ 2;
+            total = sum(squares);
+
+            <span class="comment">% Have to sqrt to get d and not d^2</span>
+            distance = sqrt(total);
+
+		<span class="keyword">end</span>
+
+        <span class="keyword">function</span> neighbour_indices = find_nn_indices(m, distances)
+            <span class="comment">% distances array needs to be sorted so it's clear which the</span>
+            <span class="comment">% nearest neighbours are i.e. the ones with the shortest</span>
+            <span class="comment">% distance</span>
+            <span class="comment">% if k = 5, then the 5 shortest distances will be used</span>
+			[sorted, indices] = sort(distances);
+
+            <span class="comment">% An array of the original indices before they were sorted</span>
+            neighbour_indices = indices(1:m.k);
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Predicts which class the example belongs to</span>
+        <span class="comment">% Checks which classes the nearest neighbours belong to</span>
+        <span class="comment">% Each label corresponds to an actual training example</span>
+        <span class="comment">% It looks at the labels, comes up with the most common and uses</span>
+        <span class="comment">% this to predict the class of the new/current testing example</span>
+        <span class="keyword">function</span> prediction = make_prediction(m, neighbour_indices)
+			neighbour_labels = m.train_labels(neighbour_indices);
+            prediction = mode(neighbour_labels);
+
+		<span class="keyword">end</span>
+
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">
+ans = 
+
+  myknn with no properties.
+
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Lazy learner: not a typical training phase by definition - therefore very fast in this
+% phase
+% Classification slower the more examples - needs to check nearest neighbours
+% in entire dataset
+% No parameters and one hyperparameter - k
+classdef myknn
+    methods(Static)
+        
+        % The training process - builds the model, m.
+        % fit() takes a copy of all the training examples, training
+        % labels and k to create the structure m.
+        function m = fit(train_examples, train_labels, k)
+            
+            % Start of z-score standardisation process
+            % Stops a certain feature from drowning out other features
+            % Makes sure all are scaled the same - can be compared
+            % e.g. all features measured from 1-10
+            % mean of the training data/standard deviation of the training
+            % data
+			m.mean = mean(train_examples{:,:});
+			m.std = std(train_examples{:,:});
+            for i=1:size(train_examples,1)
+				train_examples{i,:} = train_examples{i,:} - m.mean;
+                train_examples{i,:} = train_examples{i,:} ./ m.std;
+            end
+            % End of standardisation process
+            
+            % Store the training examples into m structure
+            m.train_examples = train_examples;
+            
+            % Store the training labels into m structure 
+            m.train_labels = train_labels;
+            
+            % Store the number of nearest neighbours to be used into m
+            % structure
+            m.k = k;
+        
+        end
+
+        % This function makes use of the predict_one() function to make an 
+        % array of predictions the classifier has made
+        function predictions = predict(m, test_examples)
+
+            predictions = categorical;
+            
+            % Loop through ALL of the test examples
+            for i=1:size(test_examples,1)
+                
+                fprintf('classifying example example %i/%i\n', i, size(test_examples,1));
+                
+                % Store the current test example
+                this_test_example = test_examples{i,:};
+                
+                % Start of standardisation process
+                this_test_example = this_test_example - m.mean;
+                this_test_example = this_test_example ./ m.std;
+                % End of standardisation process
+                
+                % Call predict_one() on the current example
+                this_prediction = myknn.predict_one(m, this_test_example);
+                
+                % Add the result to the predictions array
+                predictions(end+1) = this_prediction;
+            
+            end
+        
+        end
+        
+        function prediction = predict_one(m, this_test_example)
+            % Calculate the distance between the current example and all of
+            % the other testing examples
+            distances = myknn.calculate_distances(m, this_test_example);
+            neighbour_indices = myknn.find_nn_indices(m, distances);
+            prediction = myknn.make_prediction(m, neighbour_indices);
+        
+        end
+ 
+        function distances = calculate_distances(m, this_test_example)
+            
+			distances = [];
+            
+            % Loop through all of the TRAINING examples, NOT testing
+            % examples
+			for i=1:size(m.train_examples,1)
+                % Store current training example
+				this_training_example = m.train_examples{i,:};
+                
+                % Calculate the distance between the current training
+                % example and the current test example
+                this_distance = myknn.calculate_distance(this_training_example, this_test_example);
+                
+                % Add the distance calculated to distances array
+                distances(end+1) = this_distance;
+            end
+        
+        end
+
+        % Euclidean distance the straight line distance between 2 points
+        % Used as a measure of similarity 
+        % Uses Pythagoras' Thereom 
+        function distance = calculate_distance(p, q)
+			differences = q - p;
+            squares = differences .^ 2;
+            total = sum(squares);
+            
+            % Have to sqrt to get d and not d^2
+            distance = sqrt(total);
+        
+		end
+
+        function neighbour_indices = find_nn_indices(m, distances)
+            % distances array needs to be sorted so it's clear which the
+            % nearest neighbours are i.e. the ones with the shortest
+            % distance
+            % if k = 5, then the 5 shortest distances will be used
+			[sorted, indices] = sort(distances);
+            
+            % An array of the original indices before they were sorted
+            neighbour_indices = indices(1:m.k);
+        
+        end
+        
+        % Predicts which class the example belongs to
+        % Checks which classes the nearest neighbours belong to 
+        % Each label corresponds to an actual training example
+        % It looks at the labels, comes up with the most common and uses
+        % this to predict the class of the new/current testing example
+        function prediction = make_prediction(m, neighbour_indices)
+			neighbour_labels = m.train_labels(neighbour_indices);
+            prediction = mode(neighbour_labels);
+        
+		end
+
+    end
+end
+##### SOURCE END #####
+--></body></html>

@@ -1,0 +1,369 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>mynb</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-01-11"><meta name="DC.source" content="mynb.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput"><span class="comment">% Naive Bayes works on conditional probability - how likely something is to</span>
+<span class="comment">% occur based if something else occurrs. These are dependent events.</span>
+<span class="comment">% It treats features in the dataset equally and classes them as</span>
+<span class="comment">% independent - class conditional independence. As a result, may not pick</span>
+<span class="comment">% up on dependent relationships in the dataset.</span>
+<span class="comment">% Simple and fast algorithm but doesn't work well with datasets containing</span>
+<span class="comment">% lots of numeric features. e.g. works well identifying spam e-mails.</span>
+
+<span class="keyword">classdef</span> mynb
+    <span class="keyword">methods</span>(Static)
+
+        <span class="comment">% The training process - builds the model, m.</span>
+        <span class="comment">% Step 1: calculate probability densities</span>
+        <span class="comment">% Step 2: calculate a prior (the likelihood of a class being</span>
+        <span class="comment">% present based on how often it appears in the training data)</span>
+        <span class="keyword">function</span> m = fit(train_examples, train_labels)
+            <span class="comment">% Get all of the possible classes/labels from the training data</span>
+            m.unique_classes = unique(train_labels);
+
+            <span class="comment">% Calculate how many classes the dataset has</span>
+            m.n_classes = length(m.unique_classes);
+
+            m.means = {};
+            m.stds = {};
+
+            <span class="keyword">for</span> i = 1:m.n_classes
+
+                <span class="comment">% Store the current class</span>
+				this_class = m.unique_classes(i);
+
+                <span class="comment">% Grab all of the examples from this current, particular</span>
+                <span class="comment">% class</span>
+                examples_from_this_class = train_examples{train_labels==this_class,:};
+
+                <span class="comment">% Now we have the examples from every class</span>
+                <span class="comment">% Calculate the mean and standard deviation</span>
+                m.means{end+1} = mean(examples_from_this_class);
+                m.stds{end+1} = std(examples_from_this_class);
+
+			<span class="keyword">end</span>
+
+            m.priors = [];
+
+            <span class="keyword">for</span> i = 1:m.n_classes
+
+                <span class="comment">% Store the current class</span>
+				this_class = m.unique_classes(i);
+
+                <span class="comment">% Grab all of the examples from this current, particular</span>
+                <span class="comment">% class</span>
+                examples_from_this_class = train_examples{train_labels==this_class,:};
+
+                <span class="comment">% Divide the number of examples from THIS CLASS by the</span>
+                <span class="comment">% total number of ALL the examples</span>
+                <span class="comment">% This number is used to estimate whether a chosen example</span>
+                <span class="comment">% belongs to this particular class or not</span>
+                m.priors(end+1) = size(examples_from_this_class,1) / size(train_labels,1);
+
+			<span class="keyword">end</span>
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Predicts which class each examlple from the testing data belongs</span>
+        <span class="comment">% to</span>
+        <span class="comment">% Step 1: for the example being classified, based on each class,</span>
+        <span class="comment">% calculate a likelihood</span>
+        <span class="comment">% Step 2: Value proportional to posterior probability = each likelihood * the prior</span>
+        <span class="comment">% Step 3: Predict which class the example belongs to using the</span>
+        <span class="comment">% value calculated above</span>
+        <span class="keyword">function</span> predictions = predict(m, test_examples)
+
+            predictions = categorical;
+
+            <span class="comment">% Loop through all of the test examples</span>
+            <span class="keyword">for</span> i=1:size(test_examples,1)
+
+				fprintf(<span class="string">'classifying example %i/%i\n'</span>, i, size(test_examples,1));
+
+                <span class="comment">% Store the current test example</span>
+                this_test_example = test_examples{i,:};
+
+                <span class="comment">% Call predict_one() on the current example and store the</span>
+                <span class="comment">% result in the predictions array</span>
+                this_prediction = mynb.predict_one(m, this_test_example);
+                predictions(end+1) = this_prediction;
+
+			<span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="keyword">function</span> prediction = predict_one(m, this_test_example)
+
+            <span class="comment">% Loop over all of the classes</span>
+            <span class="keyword">for</span> i=1:m.n_classes
+
+                <span class="comment">% Calculate the likelihood for the current example in the</span>
+                <span class="comment">% current class</span>
+				this_likelihood = mynb.calculate_likelihood(m, this_test_example, i);
+                this_prior = mynb.get_prior(m, i);
+                posterior_(i) = this_likelihood * this_prior;
+
+            <span class="keyword">end</span>
+
+            <span class="comment">% Use max() to grab the most probable class (highest value in</span>
+            <span class="comment">% the array)</span>
+            [winning_value_, winning_index] = max(posterior_);
+            prediction = m.unique_classes(winning_index);
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Every feature (its value) is taken into account here - class conditional independence.</span>
+        <span class="comment">% Each feature = an independent event</span>
+        <span class="comment">% Calcluate the likelihood of the example from the particular class</span>
+        <span class="comment">% Done by looking at the distribution of the feature in examples in</span>
+        <span class="comment">% the class</span>
+        <span class="keyword">function</span> likelihood = calculate_likelihood(m, this_test_example, class)
+
+			likelihood = 1;
+
+            <span class="comment">% Multiply the probability densitites for each feature in the</span>
+            <span class="comment">% particular example</span>
+			<span class="keyword">for</span> i=1:length(this_test_example)
+                likelihood = likelihood * mynb.calculate_pd(this_test_example(i), m.means{class}(i), m.stds{class}(i));
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        <span class="comment">% Get the probability from the model</span>
+        <span class="comment">% Return the prior(s) from particular class</span>
+        <span class="keyword">function</span> prior = get_prior(m, class)
+
+			prior = m.priors(class);
+
+        <span class="keyword">end</span>
+
+        <span class="comment">% Probability density function written without in-built functions</span>
+        <span class="comment">% Calculates the probability density at a given value</span>
+        <span class="comment">% in a normal distribution</span>
+        <span class="keyword">function</span> pd = calculate_pd(x, mu, sigma)
+
+			first_bit = 1 / sqrt(2*pi*sigma^2);
+            second_bit = - ( ((x-mu)^2) / (2*sigma^2) );
+            pd = first_bit * exp(second_bit);
+
+		<span class="keyword">end</span>
+
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre><pre class="codeoutput">
+ans = 
+
+  mynb with no properties.
+
+</pre><p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+% Naive Bayes works on conditional probability - how likely something is to
+% occur based if something else occurrs. These are dependent events.
+% It treats features in the dataset equally and classes them as
+% independent - class conditional independence. As a result, may not pick
+% up on dependent relationships in the dataset.
+% Simple and fast algorithm but doesn't work well with datasets containing
+% lots of numeric features. e.g. works well identifying spam e-mails.
+
+classdef mynb
+    methods(Static)
+        
+        % The training process - builds the model, m.
+        % Step 1: calculate probability densities
+        % Step 2: calculate a prior (the likelihood of a class being
+        % present based on how often it appears in the training data)
+        function m = fit(train_examples, train_labels)
+            % Get all of the possible classes/labels from the training data
+            m.unique_classes = unique(train_labels);
+            
+            % Calculate how many classes the dataset has
+            m.n_classes = length(m.unique_classes);
+
+            m.means = {};
+            m.stds = {};
+            
+            for i = 1:m.n_classes
+            
+                % Store the current class 
+				this_class = m.unique_classes(i);
+                
+                % Grab all of the examples from this current, particular
+                % class
+                examples_from_this_class = train_examples{train_labels==this_class,:};
+                
+                % Now we have the examples from every class
+                % Calculate the mean and standard deviation
+                m.means{end+1} = mean(examples_from_this_class);
+                m.stds{end+1} = std(examples_from_this_class);
+            
+			end
+            
+            m.priors = [];
+            
+            for i = 1:m.n_classes
+                
+                % Store the current class
+				this_class = m.unique_classes(i);
+                
+                % Grab all of the examples from this current, particular
+                % class
+                examples_from_this_class = train_examples{train_labels==this_class,:};
+                
+                % Divide the number of examples from THIS CLASS by the
+                % total number of ALL the examples
+                % This number is used to estimate whether a chosen example
+                % belongs to this particular class or not
+                m.priors(end+1) = size(examples_from_this_class,1) / size(train_labels,1);
+            
+			end
+
+        end
+
+        % Predicts which class each examlple from the testing data belongs
+        % to
+        % Step 1: for the example being classified, based on each class,
+        % calculate a likelihood
+        % Step 2: Value proportional to posterior probability = each likelihood * the prior
+        % Step 3: Predict which class the example belongs to using the
+        % value calculated above 
+        function predictions = predict(m, test_examples)
+
+            predictions = categorical;
+
+            % Loop through all of the test examples
+            for i=1:size(test_examples,1)
+
+				fprintf('classifying example %i/%i\n', i, size(test_examples,1));
+                
+                % Store the current test example
+                this_test_example = test_examples{i,:};
+                
+                % Call predict_one() on the current example and store the
+                % result in the predictions array
+                this_prediction = mynb.predict_one(m, this_test_example);
+                predictions(end+1) = this_prediction;
+            
+			end
+        end
+
+        function prediction = predict_one(m, this_test_example)
+
+            % Loop over all of the classes
+            for i=1:m.n_classes
+
+                % Calculate the likelihood for the current example in the
+                % current class
+				this_likelihood = mynb.calculate_likelihood(m, this_test_example, i);
+                this_prior = mynb.get_prior(m, i);
+                posterior_(i) = this_likelihood * this_prior;
+            
+            end
+
+            % Use max() to grab the most probable class (highest value in
+            % the array)
+            [winning_value_, winning_index] = max(posterior_);
+            prediction = m.unique_classes(winning_index);
+
+        end
+        
+        % Every feature (its value) is taken into account here - class conditional independence. 
+        % Each feature = an independent event
+        % Calcluate the likelihood of the example from the particular class
+        % Done by looking at the distribution of the feature in examples in
+        % the class
+        function likelihood = calculate_likelihood(m, this_test_example, class)
+            
+			likelihood = 1;
+            
+            % Multiply the probability densitites for each feature in the
+            % particular example
+			for i=1:length(this_test_example)
+                likelihood = likelihood * mynb.calculate_pd(this_test_example(i), m.means{class}(i), m.stds{class}(i));
+            end
+        end
+        
+        % Get the probability from the model
+        % Return the prior(s) from particular class
+        function prior = get_prior(m, class)
+            
+			prior = m.priors(class);
+        
+        end
+        
+        % Probability density function written without in-built functions
+        % Calculates the probability density at a given value
+        % in a normal distribution
+        function pd = calculate_pd(x, mu, sigma)
+        
+			first_bit = 1 / sqrt(2*pi*sigma^2);
+            second_bit = - ( ((x-mu)^2) / (2*sigma^2) );
+            pd = first_bit * exp(second_bit);
+        
+		end
+            
+    end
+end
+##### SOURCE END #####
+--></body></html>
